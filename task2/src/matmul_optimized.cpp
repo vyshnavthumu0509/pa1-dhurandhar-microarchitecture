@@ -14,5 +14,32 @@
 void matmul_optimized(const float* A, const float* B, float* C,
                       int M, int N, int K, int lda, int ldb, int ldc) {
     // TODO(student): replace this placeholder with your best combined implementation.
-    matmul_naive(A, B, C, M, N, K, lda, ldb, ldc);
+    for (int i = 0; i < M; ++i) {
+
+        const float* a = A + static_cast<long>(i) * lda;
+
+        for (int j = 0; j < N; ++j) {
+            const float* b = B + static_cast<long>(j) * ldb;
+            __m256 sum_vec = _mm256_setzero_ps();
+            int p = 0;
+            for (; p + 8 <= K; p += 8) {
+                __m256 av = _mm256_loadu_ps(a + p);
+                __m256 bv = _mm256_loadu_ps(b + p);
+                sum_vec = _mm256_add_ps(
+                    sum_vec,
+                    _mm256_mul_ps(av, bv)
+                );
+            }
+            float temp[8];
+            _mm256_storeu_ps(temp, sum_vec);
+            float acc = 0.0f;
+            for (int x = 0; x < 8; ++x)
+                acc += temp[x];
+            for (; p < K; ++p) {
+                acc += a[p] * b[p];
+            }
+
+            C[static_cast<long>(i) * ldc + j] = acc;
+        }
+    }
 }
